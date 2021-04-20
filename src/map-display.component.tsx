@@ -20,7 +20,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         const drawCenterPoint = ([x, y]: Point) => {
             ctx.beginPath();
             ctx.arc(x, y, 3, 0, 2 * Math.PI, false);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = 'red';
             ctx.fill();
         };
 

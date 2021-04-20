@@ -6,9 +6,11 @@ import { MapDisplay } from './map-display.component';
 
 export const App: React.FC = () => {
   const mapOptions: MapOptions = {
-    width: 400,
-    height: 400,
-    numPolygons: 100
+    width: 600,
+    height: 600,
+    numPolygons: 100,
+    relaxationIterations: 3,
+    seed: 'butts'
   };
 
   const gameMap = generateMap(mapOptions);
