@@ -26,6 +26,7 @@ export function generateMap(options: MapOptions): GameMap {
         const voronoiPolygons: Polygon[] = [];
     
         const delaunay = Delaunay.from(points);
+        console.log(delaunay);
         const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
     
         for (let i = 0; i < points.length; i++) {
