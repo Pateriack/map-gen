@@ -9,7 +9,8 @@ export const App: React.FC = () => {
     width: 600,
     height: 600,
     numPolygons: 3,
-    relaxationIterations: 2
+    relaxationIterations: 2,
+    seed: 'butts'
   };
 
   const gameMap = generateMap(mapOptions);

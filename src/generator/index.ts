@@ -63,8 +63,6 @@ export function generateMap(options: MapOptions): GameMap {
        points = relaxPoints(points, options);
     }
 
-    console.log(points);
-
     const graphs = buildLinkedGraphs(points, options);
 
     return {
@@ -131,27 +129,29 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     const cornersMap = new StringifiedKeyMap<Point, number>();
     const vEdgesMap = new StringifiedKeyMap<[number, number], number>();
 
-    function addEdge(cornerIndexA: number, cornerIndexB: number, centerIndex: number) {
+    // Adds voronoi edge (no delaunay yet here)
+    function addEdge(cornerIndexA: number, cornerIndexB: number) {
         const edgeKey = getEdgeKey(cornerIndexA, cornerIndexB);
         let edgeIndex = vEdgesMap.get(edgeKey);
-        console.log(edgeKey);
-        console.log(edgeIndex);
         if (edgeIndex === undefined) {
             graphs.edges.push({
                 v0: cornerIndexA,
                 v1: cornerIndexB,
-                d0: centerIndex,
+                d0: -1,
                 d1: -1
             });
-            vEdgesMap.set(edgeKey, graphs.edges.length - 1);
-        } else {
-            graphs.edges[edgeIndex].d1 = centerIndex;
+            edgeIndex = graphs.edges.length - 1
+            vEdgesMap.set(edgeKey, edgeIndex);
+            graphs.corners[cornerIndexA].protrudes.push(edgeIndex);
+            graphs.corners[cornerIndexB].protrudes.push(edgeIndex);
+            graphs.corners[cornerIndexA].adjacent.push(cornerIndexB);
+            graphs.corners[cornerIndexB].adjacent.push(cornerIndexA);
         }
+        return edgeIndex;
     }
 
     // Push corners into graph
     for (let i = 0; i < points.length; i++) {
-        console.log("CENTER: " + i);
         const polygon = voronoi.cellPolygon(i);
         // store corners indices to create edges
         const indices: number[] = [];
@@ -167,12 +167,22 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
                 });
                 cornersMap.set(polygonPoint, graphs.corners.length - 1);
             }
-            const index = cornersMap.get(polygonPoint);
-            if (index !== undefined && !indices.includes(index)) indices.push(index);
+            const cornerIndex = cornersMap.get(polygonPoint);
+            if (cornerIndex !== undefined){
+                if(!graphs.centers[i].corners.includes(cornerIndex)) {
+                    graphs.centers[i].corners.push(cornerIndex);
+                }
+                if(!graphs.corners[cornerIndex].touches.includes(i)) {
+                    graphs.corners[cornerIndex].touches.push(i);
+                }
+                if (!indices.includes(cornerIndex)) {
+                    indices.push(cornerIndex);
+                }
+            } 
         }
-        addEdge(indices[0], indices[indices.length - 1], i);
+        let edgeIndex = addEdge(indices[0], indices[indices.length - 1]);
         for (let k = 0; k < indices.length - 2; k++) {
-            addEdge(indices[k], indices[k+1], i);
+            edgeIndex = addEdge(indices[k], indices[k+1]);
         }
     }
 
