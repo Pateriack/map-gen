@@ -8,7 +8,7 @@ export type Polygon = Point[];
 export interface GameMap {
     width: number;
     height: number;
-    points: Point[];
+    graphs: LinkedGraphs;
 }
 
 export interface MapOptions {
@@ -65,10 +65,12 @@ export function generateMap(options: MapOptions): GameMap {
 
     console.log(points);
 
+    const graphs = buildLinkedGraphs(points, options);
+
     return {
         width: options.width,
         height: options.height,
-        points
+        graphs
     };
 }
 
@@ -114,6 +116,7 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         corners: []
     };
 
+    // Push centers into graph
     graphs.centers = points.map(point => ({
         x: point[0],
         y: point[1],
@@ -125,10 +128,33 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     const delaunay = Delaunay.from(points);
     const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
 
-    const cornersMap: Map<[number, number], number> = new Map();
+    const cornersMap = new StringifiedKeyMap<Point, number>();
+    const vEdgesMap = new StringifiedKeyMap<[number, number], number>();
 
+    function addEdge(cornerIndexA: number, cornerIndexB: number, centerIndex: number) {
+        const edgeKey = getEdgeKey(cornerIndexA, cornerIndexB);
+        let edgeIndex = vEdgesMap.get(edgeKey);
+        console.log(edgeKey);
+        console.log(edgeIndex);
+        if (edgeIndex === undefined) {
+            graphs.edges.push({
+                v0: cornerIndexA,
+                v1: cornerIndexB,
+                d0: centerIndex,
+                d1: -1
+            });
+            vEdgesMap.set(edgeKey, graphs.edges.length - 1);
+        } else {
+            graphs.edges[edgeIndex].d1 = centerIndex;
+        }
+    }
+
+    // Push corners into graph
     for (let i = 0; i < points.length; i++) {
+        console.log("CENTER: " + i);
         const polygon = voronoi.cellPolygon(i);
+        // store corners indices to create edges
+        const indices: number[] = [];
         for (let j = 0; j < polygon.length; j++) {
             const polygonPoint: [number, number] = [polygon[j][0], polygon[j][1]];
             if (!cornersMap.has(polygonPoint)) {
@@ -138,10 +164,39 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
                     touches: [],
                     protrudes: [],
                     adjacent: []
-                })
+                });
+                cornersMap.set(polygonPoint, graphs.corners.length - 1);
             }
+            const index = cornersMap.get(polygonPoint);
+            if (index !== undefined && !indices.includes(index)) indices.push(index);
+        }
+        addEdge(indices[0], indices[indices.length - 1], i);
+        for (let k = 0; k < indices.length - 2; k++) {
+            addEdge(indices[k], indices[k+1], i);
         }
     }
 
+    console.log(graphs);
+
     return graphs;
+}
+
+class StringifiedKeyMap <T, U> {
+    private map: Map<string, U> = new Map();
+
+    set(key: T, value: U) {
+        this.map.set(JSON.stringify(key), value);
+    }
+
+    has(key: T): boolean {
+        return this.map.has(JSON.stringify(key));
+    }
+
+    get(key: T): U | undefined {
+        return this.map.get(JSON.stringify(key));
+    }
+}
+
+function getEdgeKey(a: number, b: number): [number, number] {
+    return [Math.min(a, b), Math.max(a, b)];
 }

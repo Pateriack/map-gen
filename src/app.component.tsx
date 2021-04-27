@@ -8,7 +8,7 @@ export const App: React.FC = () => {
   const mapOptions: MapOptions = {
     width: 600,
     height: 600,
-    numPolygons: 100,
+    numPolygons: 3,
     relaxationIterations: 2
   };
 

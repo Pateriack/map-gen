@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { GameMap, Point, Polygon } from './generator';
+import { Center, Corner, Edge, GameMap, Point, Polygon } from './generator';
 import './map-display.css';
 
 interface MapDisplayProps {
@@ -17,25 +17,40 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const drawCenterPoint = ([x, y]: Point) => {
+        ctx.clearRect(0, 0, gameMap.width, gameMap.height);
+
+        const drawCenter = (center: Center, index: number) => {
             ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI, false);
+            ctx.arc(center.x, center.y, 3, 0, 2 * Math.PI, false);
             ctx.fillStyle = 'red';
             ctx.fill();
+            ctx.strokeText(index + "", center.x + 5, center.y + 10);
         };
 
-        const drawPolygon = (polygon: Polygon) => {
+        const drawCorner = (corner: Corner, index: number) => {
             ctx.beginPath();
-            const [initialX, initialY] = polygon[polygon.length - 1];
-            ctx.moveTo(initialX, initialY);
-            polygon.forEach(polygon => ctx.lineTo(polygon[0], polygon[1]));
+            ctx.arc(corner.x, corner.y, 3, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'blue';
+            ctx.fill();
+            ctx.strokeText(index + "", corner.x + 5, corner.y + 10);
+        };
+
+        const drawVoronoiEdge = (edge: Edge, index: number) => {
+            ctx.beginPath();
+            const startCorner = gameMap.graphs.corners[edge.v0];
+            const endCorner = gameMap.graphs.corners[edge.v1];
+            ctx.moveTo(startCorner.x, startCorner.y);
+            ctx.lineTo(endCorner.x, endCorner.y);
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 1;
             ctx.stroke();
             ctx.closePath();
+            ctx.strokeText(index + "")
         };
 
-        gameMap.points.forEach(drawCenterPoint);
+        gameMap.graphs.centers.forEach(drawCenter);
+        gameMap.graphs.corners.forEach(drawCorner);
+        gameMap.graphs.edges.forEach(drawVoronoiEdge);
     }, [gameMap]);
 
     const canvasProps = {
