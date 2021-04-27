@@ -36,7 +36,6 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         };
 
         gameMap.points.forEach(drawCenterPoint);
-        gameMap.voronoiPolygons.forEach(drawPolygon);
     }, [gameMap]);
 
     const canvasProps = {

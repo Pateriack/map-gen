@@ -9,7 +9,6 @@ export interface GameMap {
     width: number;
     height: number;
     points: Point[];
-    voronoiPolygons: Polygon[];
 }
 
 export interface MapOptions {
@@ -20,13 +19,35 @@ export interface MapOptions {
     relaxationIterations?: number;
 }
 
+export interface Center {
+    x: number;
+    y: number;
+    neighbours: Center[];
+    borders: Edge[];
+    corners: Corner[];
+}
+
+export interface Edge {
+    d0: Center;
+    d1: Center;
+    v0: Corner;
+    v1: Corner;
+}
+
+export interface Corner {
+    x: number;
+    y: number;
+    touches: Center[];
+    protrudes: Edge[];
+    adjacent: Corner[];
+}
+
 export function generateMap(options: MapOptions): GameMap {
 
     function calculateVoronoiPolygons(points: Point[]): Polygon[] {
         const voronoiPolygons: Polygon[] = [];
     
         const delaunay = Delaunay.from(points);
-        console.log(delaunay);
         const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
     
         for (let i = 0; i < points.length; i++) {
@@ -36,35 +57,31 @@ export function generateMap(options: MapOptions): GameMap {
         return voronoiPolygons;
     }
 
-    function relax(voronoiPolygons: Polygon[]): [Point[], Polygon[]] {
-        const points = voronoiPolygons.map(calculateApproximateCentroid);
-        return [points, calculateVoronoiPolygons(points)];
+    function relaxPoints(points: Point[]): Point[] {
+        const voronoiPolygons = calculateVoronoiPolygons(points);
+        points = voronoiPolygons.map(calculateApproximateCentroid);
+        return points;
     }
 
     const rng = new RandomNumberGenerator(options.seed);
 
     let points: Point[] = [];
-    let voronoiPolygons: Polygon[] = [];
 
     for (let i = 0; i < options.numPolygons; i++) {
         points.push([rng.getNumber(options.width), rng.getNumber(options.height)]);
     }
-
-    voronoiPolygons = calculateVoronoiPolygons(points);
     
     const relaxationIterations = options.relaxationIterations ?? 0;
     for (let i = 0; i < relaxationIterations; i++) {
-        [points, voronoiPolygons] = relax(voronoiPolygons);
+       points = relaxPoints(points);
     }
 
     console.log(points);
-    console.log(voronoiPolygons);
 
     return {
         width: options.width,
         height: options.height,
-        points,
-        voronoiPolygons
+        points
     };
 }
 
