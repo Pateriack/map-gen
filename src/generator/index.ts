@@ -22,46 +22,33 @@ export interface MapOptions {
 export interface Center {
     x: number;
     y: number;
-    neighbours: Center[];
-    borders: Edge[];
-    corners: Corner[];
+    neighbours: number[]; // center index
+    borders: number[]; // edge index
+    corners: number[]; // corner index
 }
 
 export interface Edge {
-    d0: Center;
-    d1: Center;
-    v0: Corner;
-    v1: Corner;
+    d0: number; // delaunay center index
+    d1: number; // delaunay center index
+    v0: number; // voronoi corner index
+    v1: number; // voronoi corner index
 }
 
 export interface Corner {
     x: number;
     y: number;
-    touches: Center[];
-    protrudes: Edge[];
-    adjacent: Corner[];
+    touches: number[]; // center index
+    protrudes: number[]; // edge index
+    adjacent: number[]; // corner index
+}
+
+export interface LinkedGraphs {
+    centers: Center[];
+    edges: Edge[];
+    corners: Corner[];
 }
 
 export function generateMap(options: MapOptions): GameMap {
-
-    function calculateVoronoiPolygons(points: Point[]): Polygon[] {
-        const voronoiPolygons: Polygon[] = [];
-    
-        const delaunay = Delaunay.from(points);
-        const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
-    
-        for (let i = 0; i < points.length; i++) {
-            voronoiPolygons[i] = voronoi.cellPolygon(i);
-        }
-    
-        return voronoiPolygons;
-    }
-
-    function relaxPoints(points: Point[]): Point[] {
-        const voronoiPolygons = calculateVoronoiPolygons(points);
-        points = voronoiPolygons.map(calculateApproximateCentroid);
-        return points;
-    }
 
     const rng = new RandomNumberGenerator(options.seed);
 
@@ -73,7 +60,7 @@ export function generateMap(options: MapOptions): GameMap {
     
     const relaxationIterations = options.relaxationIterations ?? 0;
     for (let i = 0; i < relaxationIterations; i++) {
-       points = relaxPoints(points);
+       points = relaxPoints(points, options);
     }
 
     console.log(points);
@@ -101,16 +88,60 @@ function calculateApproximateCentroid(polygon: Polygon): Point {
     }, [0, 0]);
 }
 
-// var l = points.length;
-      
-//         return points.reduce(function(center, p, i) {
-//           center.x += p.x;
-//           center.y += p.y;
-      
-//           if(i === l - 1) {
-//               center.x /= l;
-//               center.y /= l;
-//           }
-      
-//           return center;
-//         }, {x: 0, y: 0});
+function calculateVoronoiPolygons(points: Point[], options: MapOptions): Polygon[] {
+    const voronoiPolygons: Polygon[] = [];
+
+    const delaunay = Delaunay.from(points);
+    const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
+
+    for (let i = 0; i < points.length; i++) {
+        voronoiPolygons[i] = voronoi.cellPolygon(i);
+    }
+
+    return voronoiPolygons;
+}
+
+function relaxPoints(points: Point[], options: MapOptions): Point[] {
+    const voronoiPolygons = calculateVoronoiPolygons(points, options);
+    points = voronoiPolygons.map(calculateApproximateCentroid);
+    return points;
+}
+
+function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
+    const graphs: LinkedGraphs = {
+        centers: [],
+        edges: [],
+        corners: []
+    };
+
+    graphs.centers = points.map(point => ({
+        x: point[0],
+        y: point[1],
+        neighbours: [],
+        borders: [],
+        corners: []
+    }));
+
+    const delaunay = Delaunay.from(points);
+    const voronoi = delaunay.voronoi([0, 0, options.width, options.height]);
+
+    const cornersMap: Map<[number, number], number> = new Map();
+
+    for (let i = 0; i < points.length; i++) {
+        const polygon = voronoi.cellPolygon(i);
+        for (let j = 0; j < polygon.length; j++) {
+            const polygonPoint: [number, number] = [polygon[j][0], polygon[j][1]];
+            if (!cornersMap.has(polygonPoint)) {
+                graphs.corners.push({
+                    x: polygonPoint[0],
+                    y: polygonPoint[1],
+                    touches: [],
+                    protrudes: [],
+                    adjacent: []
+                })
+            }
+        }
+    }
+
+    return graphs;
+}
