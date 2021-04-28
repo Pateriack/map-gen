@@ -71,7 +71,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             const startCorner = gameMap.graphs.corners[edge.v0];
             const endCorner = gameMap.graphs.corners[edge.v1];
             const label = options.voronoiEdgeLabels ? index : undefined;
-            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'blue', label);
+            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'black', label);
         };
 
         const drawDelaunayEdge = (edge: Edge, index: number) => {

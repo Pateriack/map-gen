@@ -26,6 +26,8 @@ export interface Center {
     neighbours: number[]; // center index
     borders: number[]; // edge index
     corners: number[]; // corner index
+    water: boolean;
+    ocean: boolean;
 }
 
 export interface Edge {
@@ -64,7 +66,9 @@ export function generateMap(options: MapOptions): GameMap {
        points = relaxPoints(points, options);
     }
 
-    const graphs = buildLinkedGraphs(points, options);
+    let graphs = buildLinkedGraphs(points, options);
+
+    graphs = randomIslands(graphs, rng);
 
     return {
         width: options.width,
@@ -121,7 +125,9 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         y: point[1],
         neighbours: [],
         borders: [],
-        corners: []
+        corners: [],
+        ocean: false,
+        water: false
     }));
 
     const delaunay = Delaunay.from(points);
@@ -230,7 +236,14 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         }
     }
 
-    console.log(graphs);
+    return graphs;
+}
+
+function randomIslands(graphs: LinkedGraphs, rng: RandomNumberGenerator): LinkedGraphs {
+    graphs.centers.forEach(center => {
+        const randomNum = rng.getNumber();
+        center.water = randomNum > 0.5;
+    });
 
     return graphs;
 }
