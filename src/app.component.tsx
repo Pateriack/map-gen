@@ -9,7 +9,7 @@ export const App: React.FC = () => {
     width: 600,
     height: 600,
     numPolygons: 300,
-    pointRelaxationIterations: 4,
+    pointRelaxationIterations: 3,
     cornerRelaxationIterations: 1,
     // seed: 'butts'
   };
@@ -23,8 +23,9 @@ export const App: React.FC = () => {
     cornerLabels: false,
     voronoiEdges: true,
     voronoiEdgeLabels: false,
-    delaunayEdges: true,
-    delaunayEdgeLabels: false
+    delaunayEdges: false,
+    delaunayEdgeLabels: false,
+    polygons: true
   };
 
   return <div id="container">

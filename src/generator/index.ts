@@ -35,6 +35,7 @@ export interface Edge {
     d1: number; // delaunay center index
     v0: number; // voronoi corner index
     v1: number; // voronoi corner index
+    dEdge: boolean; // is it a delaunay edge?
 }
 
 export interface Corner {
@@ -68,7 +69,9 @@ export function generateMap(options: MapOptions): GameMap {
 
     let graphs = buildLinkedGraphs(points, options);
 
-    graphs = randomIslands(graphs, rng);
+    graphs = radialWater(graphs, options, rng);
+
+    console.log(graphs);
 
     return {
         width: options.width,
@@ -136,22 +139,8 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     const cornersMap = new StringifiedKeyMap<Point, number>();
     const vEdgesMap = new StringifiedKeyMap<[number, number], number>();
 
-    const isEdgeOfMap = (x: number, y: number): boolean => (
-        x === 0 || x === options.width ||
-        y === 0 || y === options.height
-    );
-
-    const isCornerOfMap = (x: number, y: number): boolean => (
-        (x === 0 || x === options.width) &&
-        (y === 0 || y === options.height)
-    );
-
     // Adds voronoi edge (no delaunay yet here)
     function addEdge(cornerIndexA: number, cornerIndexB: number, centerIndex: number) {
-        if (
-            isEdgeOfMap(graphs.corners[cornerIndexA].x, graphs.corners[cornerIndexA].y) &&
-            isEdgeOfMap(graphs.corners[cornerIndexB].x, graphs.corners[cornerIndexB].y)
-        ) return;
         const edgeKey = getEdgeKey(cornerIndexA, cornerIndexB);
         let edgeIndex = vEdgesMap.get(edgeKey);
         if (edgeIndex === undefined) {
@@ -159,7 +148,8 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
                 v0: cornerIndexA,
                 v1: cornerIndexB,
                 d0: centerIndex,
-                d1: -1
+                d1: -1,
+                dEdge: false
             });
             edgeIndex = graphs.edges.length - 1
             vEdgesMap.set(edgeKey, edgeIndex);
@@ -170,6 +160,7 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
             graphs.centers[centerIndex].borders.push(edgeIndex);
         } else {
             graphs.edges[edgeIndex].d1 = centerIndex;
+            graphs.edges[edgeIndex].dEdge = true;
             const centerIndex2 = graphs.edges[edgeIndex].d0;
             graphs.centers[centerIndex].neighbours.push(centerIndex2);
             graphs.centers[centerIndex2].neighbours.push(centerIndex);
@@ -183,9 +174,6 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         const cornerIndices: number[] = [];
         for (let j = 0; j < polygon.length; j++) {
             const polygonPoint: [number, number] = [polygon[j][0], polygon[j][1]];
-            if (isCornerOfMap(polygonPoint[0], polygonPoint[1])) {
-                continue;
-            }
             if (!cornersMap.has(polygonPoint)) {
                 graphs.corners.push({
                     x: polygonPoint[0],
@@ -217,7 +205,7 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
 
     function relaxCorners() {
         for (const corner of graphs.corners) {
-            if (isEdgeOfMap(corner.x, corner.y)) {
+            if (isEdgeOfMap(corner.x, corner.y, options)) {
                 continue;
             }
             const polygon: Polygon = corner.touches.map(i => {
@@ -248,6 +236,27 @@ function randomIslands(graphs: LinkedGraphs, rng: RandomNumberGenerator): Linked
     return graphs;
 }
 
+function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumberGenerator): LinkedGraphs {
+    const RATIO_THRESHOLD = 0.4;
+    const RATIO_RANDOMIZATION = 0.15;
+
+    graphs.centers.forEach(center => {
+        if (isCenterAtEdgeOfMap(center, graphs, options)) {
+            center.water = true;
+            return;
+        }
+        const distanceFromCenter = calculateDistanceFromCenter(center.x, center.y, options);
+        //todo: handle non-square maps better
+        const ratioFromCenter = distanceFromCenter / Math.min(options.width, options.height);
+        const randomizedRatio = ratioFromCenter + rng.getNumber(0 - RATIO_RANDOMIZATION / 2, RATIO_RANDOMIZATION / 2);
+        if (randomizedRatio > RATIO_THRESHOLD) {
+            center.water = true;
+        }
+    });
+
+    return graphs;
+}
+
 class StringifiedKeyMap <T, U> {
     private map: Map<string, U> = new Map();
 
@@ -267,3 +276,36 @@ class StringifiedKeyMap <T, U> {
 function getEdgeKey(a: number, b: number): [number, number] {
     return [Math.min(a, b), Math.max(a, b)];
 }
+
+const isEdgeOfMap = (x: number, y: number, options: MapOptions): boolean => (
+    x === 0 || x === options.width ||
+    y === 0 || y === options.height
+);
+
+const isCenterAtEdgeOfMap = (center: Center, graphs: LinkedGraphs, options: MapOptions): boolean => {
+    for (const cornerIndex of center.corners) {
+        const corner = graphs.corners[cornerIndex];
+        if (isEdgeOfMap(corner.x, corner.y, options)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+const getCenterOfMap = (options: MapOptions): [number, number] => {
+    return [options.width / 2, options.height / 2];
+};
+
+const calculateDistance = (x0: number, y0: number, x1: number, y1: number): number => {
+    return Math.sqrt(Math.pow(x0 - x1, 2) + Math.pow(y0 - y1, 2));
+}
+
+const calculateDistanceFromCenter = (x: number, y: number, options: MapOptions): number => {
+    const [cX, cY] = getCenterOfMap(options);
+    return calculateDistance(x, y, cX, cY);
+};
+
+// const isCornerOfMap = (x: number, y: number): boolean => (
+//     (x === 0 || x === options.width) &&
+//     (y === 0 || y === options.height)
+// );

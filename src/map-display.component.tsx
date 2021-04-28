@@ -16,6 +16,7 @@ export interface MapDisplayOptions {
     delaunayEdgeLabels?: boolean;
     voronoiEdges?: boolean;
     voronoiEdgeLabels?: boolean;
+    polygons?: boolean;
 }
 
 export const MapDisplay: React.FC<MapDisplayProps> = ({
@@ -92,6 +93,22 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             ctx.strokeText(String(text), xPos, yPos);
         };
 
+        const drawPolygon = (center: Center) => {
+            ctx.fillStyle = getPolygonColor(center);
+            ctx.beginPath();
+            let corner = gameMap.graphs.corners[center.corners[center.corners.length - 1]];
+            ctx.moveTo(corner.x, corner.y);
+            center.corners.forEach(cIndex => {
+                corner = gameMap.graphs.corners[cIndex];
+                ctx.lineTo(corner.x, corner.y);
+            });
+            ctx.closePath();
+            ctx.fill();
+        };
+
+        if (options.polygons) {
+            gameMap.graphs.centers.forEach(drawPolygon);
+        }
         if (options.centers){
             gameMap.graphs.centers.forEach(drawCenter);
         }
@@ -102,7 +119,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             gameMap.graphs.edges.forEach(drawVoronoiEdge);
         }
         if (options.delaunayEdges) {
-            gameMap.graphs.edges.forEach(drawDelaunayEdge);
+            gameMap.graphs.edges.filter(e => e.dEdge).forEach(drawDelaunayEdge);
         }
     }, [
         gameMap,
@@ -113,7 +130,8 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         options.voronoiEdges,
         options.voronoiEdgeLabels,
         options.delaunayEdges,
-        options.delaunayEdgeLabels
+        options.delaunayEdgeLabels,
+        options.polygons
     ]);
 
     const canvasProps = {
@@ -123,6 +141,13 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
     };
 
     return <canvas className="map-canvas" {...canvasProps} />
+}
+
+function getPolygonColor(center: Center): string {
+    if (center.water) {
+        return '#006699';
+    }
+    return '#be7853';
 }
 
 function clamp(value: number, min: number, max: number) {
