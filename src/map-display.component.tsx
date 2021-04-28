@@ -1,13 +1,26 @@
 import React, { useEffect, useRef } from 'react';
-import { Center, Corner, Edge, GameMap, Point, Polygon } from './generator';
+import { Center, Corner, Edge, GameMap } from './generator';
 import './map-display.css';
 
 interface MapDisplayProps {
     gameMap: GameMap;
+    options: MapDisplayOptions;
+}
+
+export interface MapDisplayOptions {
+    centers?: boolean;
+    centerLabels?: boolean;
+    corners?: boolean;
+    cornerLabels?: boolean;
+    delaunayEdges?: boolean;
+    delaunayEdgeLabels?: boolean;
+    voronoiEdges?: boolean;
+    voronoiEdgeLabels?: boolean;
 }
 
 export const MapDisplay: React.FC<MapDisplayProps> = ({
-    gameMap
+    gameMap,
+    options
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -45,29 +58,63 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         };
 
         const drawCenter = (center: Center, index: number) => {
-            drawPoint(center.x, center.y, 'red', index);
+            const label = options.centerLabels ? index : undefined;
+            drawPoint(center.x, center.y, 'red', label);
         };
 
         const drawCorner = (corner: Corner, index: number) => {
-            drawPoint(corner.x, corner.y, 'blue', index);
+            const label = options.cornerLabels ? index : undefined;
+            drawPoint(corner.x, corner.y, 'blue', label);
         };
 
         const drawVoronoiEdge = (edge: Edge, index: number) => {
             const startCorner = gameMap.graphs.corners[edge.v0];
             const endCorner = gameMap.graphs.corners[edge.v1];
-            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'black', index);
+            const label = options.voronoiEdgeLabels ? index : undefined;
+            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'blue', label);
         };
 
-        const drawLabel = (text: string | number, x: number, y: number, xOffset = 0, yOffset = 0, edgePadding = 10) => {
+        const drawDelaunayEdge = (edge: Edge, index: number) => {
+            if (edge.d1 < 0) {
+                return;
+            }
+            const startCenter = gameMap.graphs.centers[edge.d0];
+            const endCenter = gameMap.graphs.centers[edge.d1];
+            const label = options.delaunayEdgeLabels ? index : undefined;
+            drawLine(startCenter.x, startCenter.y, endCenter.x, endCenter.y, 'red', label);
+        }
+
+        const drawLabel = (text: string | number, x: number, y: number, xOffset = 0, yOffset = 0, edgePadding = 14) => {
             const xPos = clamp(x + xOffset, edgePadding, gameMap.width - edgePadding);
             const yPos = clamp(y + yOffset, edgePadding, gameMap.height - edgePadding);
+            ctx.font = '13px Arial';
+            ctx.strokeStyle = 'black';
             ctx.strokeText(String(text), xPos, yPos);
         };
 
-        gameMap.graphs.centers.forEach(drawCenter);
-        gameMap.graphs.corners.forEach(drawCorner);
-        gameMap.graphs.edges.forEach(drawVoronoiEdge);
-    }, [gameMap]);
+        if (options.centers){
+            gameMap.graphs.centers.forEach(drawCenter);
+        }
+        if (options.corners) {
+            gameMap.graphs.corners.forEach(drawCorner);
+        }
+        if (options.voronoiEdges) {
+            gameMap.graphs.edges.forEach(drawVoronoiEdge);
+        }
+        if (options.delaunayEdges) {
+            gameMap.graphs.edges.forEach(drawDelaunayEdge);
+        }
+    }, [
+        gameMap,
+        options.centers,
+        options.centerLabels,
+        options.corners,
+        options.cornerLabels,
+        options.voronoiEdges,
+        options.voronoiEdgeLabels,
+        options.delaunayEdges,
+        options.delaunayEdgeLabels
+    ]);
 
     const canvasProps = {
         ref: canvasRef,
