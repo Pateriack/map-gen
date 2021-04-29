@@ -1,4 +1,5 @@
 import { Delaunay } from 'd3-delaunay';
+import { noiseMaker } from './noise';
 import { RandomNumberGenerator } from './random-number-generator';
 
 export type Point = number[];
@@ -28,6 +29,7 @@ export interface Center {
     corners: number[]; // corner index
     water: boolean;
     ocean: boolean;
+    noise: number;
 }
 
 export interface Edge {
@@ -130,7 +132,8 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         borders: [],
         corners: [],
         ocean: false,
-        water: false
+        water: false,
+        noise: 0
     }));
 
     const delaunay = Delaunay.from(points);
@@ -227,31 +230,34 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     return graphs;
 }
 
-function randomIslands(graphs: LinkedGraphs, rng: RandomNumberGenerator): LinkedGraphs {
-    graphs.centers.forEach(center => {
-        const randomNum = rng.getNumber();
-        center.water = randomNum > 0.5;
-    });
-
-    return graphs;
-}
-
 function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumberGenerator): LinkedGraphs {
     const RATIO_THRESHOLD = 0.4;
     const RATIO_RANDOMIZATION = 0.15;
+    const RATIO_NOISE_SCALING = 0.15;
+    const CORNERS_REQUIRED_THRESHOLD = 0.5;
+
+    const noise2D = noiseMaker(rng);
+
+    const waterCorners = graphs.corners.map(corner => {
+        const distanceFromCenter = calculateDistanceFromCenter(corner.x, corner.y, options);
+        //todo: handle non-square maps better
+        const ratioFromCenter = distanceFromCenter / Math.min(options.width, options.height);
+        const randomizedRatio = ratioFromCenter + rng.getNumber(0 - RATIO_RANDOMIZATION / 2, RATIO_RANDOMIZATION / 2);
+        const noise = noise2D(corner.x, corner.y);
+        const ratioWithNoise = ratioFromCenter + (noise * RATIO_NOISE_SCALING);
+        return ratioWithNoise > RATIO_THRESHOLD;
+    });
 
     graphs.centers.forEach(center => {
+        center.noise = noise2D(center.x, center.y);
         if (isCenterAtEdgeOfMap(center, graphs, options)) {
             center.water = true;
             return;
         }
-        const distanceFromCenter = calculateDistanceFromCenter(center.x, center.y, options);
-        //todo: handle non-square maps better
-        const ratioFromCenter = distanceFromCenter / Math.min(options.width, options.height);
-        const randomizedRatio = ratioFromCenter + rng.getNumber(0 - RATIO_RANDOMIZATION / 2, RATIO_RANDOMIZATION / 2);
-        if (randomizedRatio > RATIO_THRESHOLD) {
-            center.water = true;
-        }
+        const numCorners = center.corners.length;
+        const numWaterCorners = center.corners.reduce((acc, cornerIndex) => acc + (waterCorners[cornerIndex] ? 1 : 0), 0);
+        const waterCornerRatio = numWaterCorners / numCorners;
+        center.water = waterCornerRatio > CORNERS_REQUIRED_THRESHOLD;
     });
 
     return graphs;
