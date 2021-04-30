@@ -77,7 +77,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
 
         const drawCenter = (center: Center, index: number) => {
             const label = options.centerLabels ? index : undefined;
-            drawPoint(center.x, center.y, 'red', label);
+            drawPoint(center.x, center.y, 'black', label);
         };
 
         const drawCorner = (corner: Corner, index: number) => {
