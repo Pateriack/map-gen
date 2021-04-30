@@ -36,13 +36,13 @@ export const MapDisplayForm: React.FC<MapDisplayFormProps> = ({
                 <FormGroup row>
                     <FormControlLabel
                         control={<Checkbox name='delaunayEdges' checked={mapDisplayOptions.delaunayEdges} onChange={e => onChange({ delaunayEdges: e.target.checked })} />}
-                        label="Show Delaunay Edges"
+                        label="Show Adjacency Graph Edges"
                     />
                 </FormGroup>
                 <FormGroup row>
                     <FormControlLabel
                         control={<Checkbox name='voronoiEdges' checked={mapDisplayOptions.voronoiEdges} onChange={e => onChange({ voronoiEdges: e.target.checked })} />}
-                        label="Show Voronoi Edges"
+                        label="Show Polygon Edges"
                     />
                 </FormGroup>
                 <FormGroup row>
