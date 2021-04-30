@@ -24,7 +24,7 @@ const initialDisplayOptions: MapDisplayOptions = {
   voronoiEdgeLabels: false,
   delaunayEdges: false,
   delaunayEdgeLabels: false,
-  polygons: false
+  polygons: true
 };
 
 const initialMapOptions: MapOptions = {
