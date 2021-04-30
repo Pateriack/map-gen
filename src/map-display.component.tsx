@@ -1,6 +1,6 @@
+import { makeStyles } from '@material-ui/core';
 import React, { useEffect, useRef } from 'react';
 import { Center, Corner, Edge, GameMap } from './generator';
-import './map-display.css';
 
 interface MapDisplayProps {
     gameMap: GameMap;
@@ -17,14 +17,22 @@ export interface MapDisplayOptions {
     voronoiEdges?: boolean;
     voronoiEdgeLabels?: boolean;
     polygons?: boolean;
-    showNoise?: boolean;
+    showWaterNoise?: boolean;
 }
+
+const useStyles = makeStyles(theme => ({
+    canvas: {
+        background: 'white'
+    }
+}));
 
 export const MapDisplay: React.FC<MapDisplayProps> = ({
     gameMap,
     options
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    const classes = useStyles();
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -59,6 +67,14 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             }
         };
 
+        const drawLabel = (text: string | number, x: number, y: number, xOffset = 0, yOffset = 0, edgePadding = 14) => {
+            const xPos = clamp(x + xOffset, edgePadding, gameMap.width - edgePadding);
+            const yPos = clamp(y + yOffset, edgePadding, gameMap.height - edgePadding);
+            ctx.font = '13px Arial';
+            ctx.strokeStyle = 'black';
+            ctx.strokeText(String(text), xPos, yPos);
+        };
+
         const drawCenter = (center: Center, index: number) => {
             const label = options.centerLabels ? index : undefined;
             drawPoint(center.x, center.y, 'red', label);
@@ -86,16 +102,8 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             drawLine(startCenter.x, startCenter.y, endCenter.x, endCenter.y, 'red', label);
         }
 
-        const drawLabel = (text: string | number, x: number, y: number, xOffset = 0, yOffset = 0, edgePadding = 14) => {
-            const xPos = clamp(x + xOffset, edgePadding, gameMap.width - edgePadding);
-            const yPos = clamp(y + yOffset, edgePadding, gameMap.height - edgePadding);
-            ctx.font = '13px Arial';
-            ctx.strokeStyle = 'black';
-            ctx.strokeText(String(text), xPos, yPos);
-        };
-
         const drawPolygon = (center: Center) => {
-            ctx.fillStyle = getPolygonColor(center, options.showNoise);
+            ctx.fillStyle = getPolygonColor(center, options.showWaterNoise);
             ctx.beginPath();
             let corner = gameMap.graphs.corners[center.corners[center.corners.length - 1]];
             ctx.moveTo(corner.x, corner.y);
@@ -133,7 +141,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         options.delaunayEdges,
         options.delaunayEdgeLabels,
         options.polygons,
-        options.showNoise
+        options.showWaterNoise
     ]);
 
     const canvasProps = {
@@ -142,7 +150,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         height: gameMap.height
     };
 
-    return <canvas className="map-canvas" {...canvasProps} />
+    return <canvas className={classes.canvas} {...canvasProps} />
 }
 
 function getPolygonColor(center: Center, showNoise = false): string {

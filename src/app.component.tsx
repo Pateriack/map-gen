@@ -1,20 +1,52 @@
-import React from 'react';
+import { AppBar, Container, Divider, Grid, makeStyles, Toolbar, Typography } from '@material-ui/core';
+import React, { useState } from 'react';
 
-import './app.css';
-import { generateMap, MapOptions } from './generator';
+import { GameMap, generateMap, MapOptions } from './generator';
+import { MapDisplayForm } from './map-display-form.component';
+import { MapOptionsForm } from './map-options-form.component';
 import { MapDisplay, MapDisplayOptions } from './map-display.component';
 
-export const App: React.FC = () => {
-  const mapOptions: MapOptions = {
-    width: 600,
-    height: 600,
-    numPolygons: 300,
-    pointRelaxationIterations: 3,
-    cornerRelaxationIterations: 1,
-    // seed: 'butts'
-  };
+const useStyles = makeStyles(theme => ({
+  container: {
+    marginTop: theme.spacing(4)
+  }
+}));
 
-  const gameMap = generateMap(mapOptions);
+const initialDisplayOptions: MapDisplayOptions = {
+  centers: false,
+  centerLabels: false,
+  corners: false,
+  cornerLabels: false,
+  voronoiEdges: true,
+  voronoiEdgeLabels: false,
+  delaunayEdges: false,
+  delaunayEdgeLabels: false,
+  polygons: false
+};
+
+const initialMapOptions: MapOptions = {
+  width: 600,
+  height: 600,
+  numPolygons: 300,
+  pointRelaxationIterations: 3,
+  cornerRelaxationIterations: 1
+};
+
+export const App: React.FC = () => {
+  const classes = useStyles();
+
+  const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>(initialDisplayOptions);
+
+  const [mapOptions, setMapOptions] = useState<MapOptions>(initialMapOptions);
+
+  const [gameMap, setGameMap] = useState<GameMap>(generateMap(mapOptions));
+
+  const handleMapDisplayOptionsChange = (updatedOptions: Partial<MapDisplayOptions>) => {
+    setMapDisplayOptions({
+      ...mapDisplayOptions,
+      ...updatedOptions
+    });
+  };
 
   const displayOptions: MapDisplayOptions = {
     centers: false,
@@ -25,10 +57,27 @@ export const App: React.FC = () => {
     voronoiEdgeLabels: false,
     delaunayEdges: false,
     delaunayEdgeLabels: false,
-    polygons: true
+    polygons: false
   };
 
-  return <div id="container">
-    <MapDisplay gameMap={gameMap} options={displayOptions} />
-  </div>
+  return <React.Fragment>
+    <AppBar position="static">
+      <Toolbar>
+        <Typography variant="h6">
+          Polygon Map Generator
+        </Typography>
+      </Toolbar>
+    </AppBar>
+    <Container className={classes.container}>
+      <Grid container spacing={2}>
+        <Grid item sm={12} md={4}>
+          <MapDisplayForm mapDisplayOptions={mapDisplayOptions} onChange={handleMapDisplayOptionsChange} />
+          <MapOptionsForm mapOptions={mapOptions} />
+        </Grid>
+        <Grid item sm={12} md={8}>
+          <MapDisplay gameMap={gameMap} options={mapDisplayOptions} />
+        </Grid>
+      </Grid>
+    </Container>
+  </React.Fragment>
 }
