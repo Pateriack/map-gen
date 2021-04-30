@@ -2,6 +2,7 @@ import { Delaunay } from 'd3-delaunay';
 import { noiseMaker } from './noise';
 import { RandomNumberGenerator } from './random-number-generator';
 
+
 export type Point = number[];
 
 export type Polygon = Point[];
