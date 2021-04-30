@@ -118,17 +118,17 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         if (options.polygons) {
             gameMap.graphs.centers.forEach(drawPolygon);
         }
-        if (options.centers){
-            gameMap.graphs.centers.forEach(drawCenter);
-        }
-        if (options.corners) {
-            gameMap.graphs.corners.forEach(drawCorner);
-        }
         if (options.voronoiEdges) {
             gameMap.graphs.edges.forEach(drawVoronoiEdge);
         }
         if (options.delaunayEdges) {
             gameMap.graphs.edges.filter(e => e.dEdge).forEach(drawDelaunayEdge);
+        }
+        if (options.centers){
+            gameMap.graphs.centers.forEach(drawCenter);
+        }
+        if (options.corners) {
+            gameMap.graphs.corners.forEach(drawCorner);
         }
     }, [
         gameMap,
