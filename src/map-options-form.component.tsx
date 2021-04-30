@@ -34,7 +34,7 @@ export const MapOptionsForm: React.FC<MapOptionsFormProps> = ({
 
     return (
         <React.Fragment>
-            <Typography variant='h6' gutterBottom>Map Options</Typography>
+            <Typography variant='h6' gutterBottom>Map Generation</Typography>
             <form className={classes.form}>
                 <TextField
                   label='Number of Polygons'

@@ -19,7 +19,7 @@ export const MapDisplayForm: React.FC<MapDisplayFormProps> = ({
 
     return (
         <React.Fragment>
-            <Typography variant="h6" gutterBottom>Map Display Options</Typography>
+            <Typography variant="h6" gutterBottom>Display</Typography>
             <form>
                 <FormGroup row>
                     <FormControlLabel
