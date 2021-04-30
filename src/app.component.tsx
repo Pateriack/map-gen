@@ -64,8 +64,12 @@ export const App: React.FC = () => {
   };
 
   const handleRandomizeSeed = () => {
-    handleMapOptionsChange({ seed: getRandomSeed() });
-    handleRegenerate();
+    const newMapOptions: MapOptions = {
+      ...mapOptions,
+      seed: getRandomSeed()
+    };
+    setMapOptions(newMapOptions);
+    setGameMap(generateMap(newMapOptions));
   };
 
   return <React.Fragment>
