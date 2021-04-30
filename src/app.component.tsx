@@ -70,7 +70,7 @@ export const App: React.FC = () => {
 
   return <React.Fragment>
     <AppBar position="static">
-      <Toolbar>
+      <Toolbar variant='dense'>
         <Typography variant="h6">
           Polygon Map Generator
         </Typography>
