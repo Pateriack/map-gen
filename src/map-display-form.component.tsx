@@ -24,13 +24,13 @@ export const MapDisplayForm: React.FC<MapDisplayFormProps> = ({
                 <FormGroup row>
                     <FormControlLabel
                         control={<Checkbox name='centers' checked={mapDisplayOptions.centers} onChange={e => onChange({ centers: e.target.checked })} />}
-                        label="Show Centers"
+                        label="Show Polygon Centers"
                     />
                 </FormGroup>
                 <FormGroup row>
                     <FormControlLabel
                         control={<Checkbox name='corners' checked={mapDisplayOptions.corners} onChange={e => onChange({ corners: e.target.checked })} />}
-                        label="Show Corners"
+                        label="Show Polygon Corners"
                     />
                 </FormGroup>
                 <FormGroup row>
