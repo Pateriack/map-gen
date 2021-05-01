@@ -30,7 +30,7 @@ export interface Center {
     corners: number[]; // corner index
     water: boolean;
     ocean: boolean;
-    noise: number;
+    area: number;
 }
 
 export interface Edge {
@@ -71,6 +71,8 @@ export function generateMap(options: MapOptions): GameMap {
     }
 
     let graphs = buildLinkedGraphs(points, options);
+
+    calculateAreaOfAllPolygons(graphs);
 
     graphs = radialWater(graphs, options, rng);
 
@@ -134,7 +136,7 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         corners: [],
         ocean: false,
         water: false,
-        noise: 0
+        area: 0
     }));
 
     const delaunay = Delaunay.from(points);
@@ -233,7 +235,6 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
 
 function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumberGenerator): LinkedGraphs {
     const RATIO_THRESHOLD = 0.4;
-    const RATIO_RANDOMIZATION = 0.15;
     const RATIO_NOISE_SCALING = 0.15;
     const CORNERS_REQUIRED_THRESHOLD = 0.5;
 
@@ -243,14 +244,12 @@ function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumbe
         const distanceFromCenter = calculateDistanceFromCenter(corner.x, corner.y, options);
         //todo: handle non-square maps better
         const ratioFromCenter = distanceFromCenter / Math.min(options.width, options.height);
-        const randomizedRatio = ratioFromCenter + rng.getNumber(0 - RATIO_RANDOMIZATION / 2, RATIO_RANDOMIZATION / 2);
         const noise = noise2D(corner.x, corner.y);
         const ratioWithNoise = ratioFromCenter + (noise * RATIO_NOISE_SCALING);
         return ratioWithNoise > RATIO_THRESHOLD;
     });
 
     graphs.centers.forEach(center => {
-        center.noise = noise2D(center.x, center.y);
         if (isCenterAtEdgeOfMap(center, graphs, options)) {
             center.water = true;
             return;
@@ -311,6 +310,38 @@ const calculateDistanceFromCenter = (x: number, y: number, options: MapOptions):
     const [cX, cY] = getCenterOfMap(options);
     return calculateDistance(x, y, cX, cY);
 };
+
+const calculatePolygonArea = (centerIndex: number, graphs: LinkedGraphs): number => {
+    const center = graphs.centers[centerIndex];
+    const numPoints = center.corners.length;
+    let area = 0;
+    let j = numPoints - 1;
+    for (let i = 0; i < numPoints; i++) {
+        const cornerI = graphs.corners[center.corners[i]];
+        const cornerJ = graphs.corners[center.corners[j]];
+        area += (cornerJ.x + cornerI.x) * (cornerJ.y - cornerI.y);
+        j = i;
+    }
+    return Math.abs(area / 2);
+}
+
+const calculateAreaOfAllPolygons = (graphs: LinkedGraphs) => {
+    for (let i = 0; i < graphs.centers.length; i++) {
+        graphs.centers[i].area = calculatePolygonArea(i, graphs);
+    }
+}
+
+// function polygonArea(X, Y, numPoints) 
+// { 
+// area = 0;   // Accumulates area 
+// j = numPoints-1; 
+
+// for (i=0; i<numPoints; i++)
+// { area +=  (X[j]+X[i]) * (Y[j]-Y[i]); 
+//   j = i;  //j is previous vertex to i
+// }
+//   return area/2;
+// }
 
 // const isCornerOfMap = (x: number, y: number): boolean => (
 //     (x === 0 || x === options.width) &&

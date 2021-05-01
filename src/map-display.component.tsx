@@ -17,7 +17,6 @@ export interface MapDisplayOptions {
     voronoiEdges?: boolean;
     voronoiEdgeLabels?: boolean;
     polygons?: boolean;
-    showWaterNoise?: boolean;
 }
 
 const useStyles = makeStyles(theme => ({
@@ -103,7 +102,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         }
 
         const drawPolygon = (center: Center) => {
-            ctx.fillStyle = getPolygonColor(center, options.showWaterNoise);
+            ctx.fillStyle = getPolygonColor(center);
             ctx.beginPath();
             let corner = gameMap.graphs.corners[center.corners[center.corners.length - 1]];
             ctx.moveTo(corner.x, corner.y);
@@ -140,8 +139,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         options.voronoiEdgeLabels,
         options.delaunayEdges,
         options.delaunayEdgeLabels,
-        options.polygons,
-        options.showWaterNoise
+        options.polygons
     ]);
 
     const canvasProps = {
@@ -153,12 +151,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
     return <canvas className={classes.canvas} {...canvasProps} />
 }
 
-function getPolygonColor(center: Center, showNoise = false): string {
-    if (showNoise) {
-        const lightness = (center.noise + 1) / 2 * 255;
-        const color = `rgb(${lightness},${lightness},${lightness})`;
-        return color;
-    }
+function getPolygonColor(center: Center): string {
     if (center.water) {
         return '#006699';
     }
