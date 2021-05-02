@@ -1,59 +1,9 @@
+import { RoundedCornerSharp } from '@material-ui/icons';
 import { Delaunay } from 'd3-delaunay';
 import { noiseMaker } from './noise';
 import { RandomNumberGenerator } from './random-number-generator';
-
-
-export type Point = number[];
-
-export type Polygon = Point[];
-
-export interface GameMap {
-    width: number;
-    height: number;
-    graphs: LinkedGraphs;
-}
-
-export interface MapOptions {
-    width: number;
-    height: number;
-    numPolygons: number;
-    seed?: string;
-    pointRelaxationIterations?: number;
-    cornerRelaxationIterations?: number;
-}
-
-export interface Center {
-    x: number;
-    y: number;
-    neighbours: number[]; // center index
-    borders: number[]; // edge index
-    corners: number[]; // corner index
-    water: boolean;
-    ocean: boolean;
-    area: number;
-}
-
-export interface Edge {
-    d0: number; // delaunay center index
-    d1: number; // delaunay center index
-    v0: number; // voronoi corner index
-    v1: number; // voronoi corner index
-    dEdge: boolean; // is it a delaunay edge?
-}
-
-export interface Corner {
-    x: number;
-    y: number;
-    touches: number[]; // center index
-    protrudes: number[]; // edge index
-    adjacent: number[]; // corner index
-}
-
-export interface LinkedGraphs {
-    centers: Center[];
-    edges: Edge[];
-    corners: Corner[];
-}
+import { GameMap, LinkedGraphs, MapOptions, Point, Polygon } from './types';
+import { calculateApproximateCentroid, calculateAreaOfAllPolygons, calculateDistanceFromCenter, findApproximateCenterAtCenterOfMap, getEdgeKey, isCenterAtEdgeOfMap, isEdgeOfMap, StringifiedKeyMap } from './utils';
 
 export function generateMap(options: MapOptions): GameMap {
 
@@ -76,6 +26,11 @@ export function generateMap(options: MapOptions): GameMap {
 
     graphs = radialWater(graphs, options, rng);
 
+    graphs = fillOceans(graphs, options);
+    graphs = removeLakes(graphs);
+    graphs = fillMainland(graphs, options);
+    graphs = markCoastal(graphs);
+
     console.log(graphs);
 
     return {
@@ -85,21 +40,7 @@ export function generateMap(options: MapOptions): GameMap {
     };
 }
 
-function calculateApproximateCentroid(polygon: Polygon): Point {
-    var  l = polygon.length;
 
-    return polygon.reduce((center, p, i) => {
-        center[0] += p[0];
-        center[1] += p[1];
-
-        if (i === l - 1) {
-            center[0] /= l;
-            center[1] /= l;
-        }
-
-        return center;
-    }, [0, 0]);
-}
 
 function calculateVoronoiPolygons(points: Point[], options: MapOptions): Polygon[] {
     const voronoiPolygons: Polygon[] = [];
@@ -136,7 +77,9 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
         corners: [],
         ocean: false,
         water: false,
-        area: 0
+        area: 0,
+        mainland: false,
+        coastal: false
     }));
 
     const delaunay = Delaunay.from(points);
@@ -155,7 +98,9 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
                 v1: cornerIndexB,
                 d0: centerIndex,
                 d1: -1,
-                dEdge: false
+                dEdge: false,
+                coastal: false,
+                water: false
             });
             edgeIndex = graphs.edges.length - 1
             vEdgesMap.set(edgeKey, edgeIndex);
@@ -186,7 +131,8 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
                     y: polygonPoint[1],
                     touches: [],
                     protrudes: [],
-                    adjacent: []
+                    adjacent: [],
+                    coastal: false
                 });
                 cornersMap.set(polygonPoint, graphs.corners.length - 1);
             }
@@ -263,87 +209,128 @@ function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumbe
     return graphs;
 }
 
-class StringifiedKeyMap <T, U> {
-    private map: Map<string, U> = new Map();
+function fillOceans(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
+    let startingIndex = graphs.centers.findIndex(center => isCenterAtEdgeOfMap(center, graphs, options));
 
-    set(key: T, value: U) {
-        this.map.set(JSON.stringify(key), value);
+    if (isNaN(startingIndex)){
+        return graphs;
     }
 
-    has(key: T): boolean {
-        return this.map.has(JSON.stringify(key));
-    }
+    const visited: boolean[] = [];
+    const stack: number[] = [];
 
-    get(key: T): U | undefined {
-        return this.map.get(JSON.stringify(key));
-    }
-}
+    stack.push(startingIndex);
 
-function getEdgeKey(a: number, b: number): [number, number] {
-    return [Math.min(a, b), Math.max(a, b)];
-}
+    while (stack.length) {
+        const index = stack.pop();
 
-const isEdgeOfMap = (x: number, y: number, options: MapOptions): boolean => (
-    x === 0 || x === options.width ||
-    y === 0 || y === options.height
-);
+        if (index === undefined) continue;
 
-const isCenterAtEdgeOfMap = (center: Center, graphs: LinkedGraphs, options: MapOptions): boolean => {
-    for (const cornerIndex of center.corners) {
-        const corner = graphs.corners[cornerIndex];
-        if (isEdgeOfMap(corner.x, corner.y, options)) {
-            return true;
+        graphs.centers[index].ocean = true;
+
+        if (!visited[index]) {
+            visited[index] = true;
         }
+
+        graphs.centers[index].neighbours.forEach(neighbourIndex => {
+            if (!visited[neighbourIndex] && graphs.centers[neighbourIndex].water) {
+                stack.push(neighbourIndex);
+            }
+        });
+
     }
-    return false;
-};
 
-const getCenterOfMap = (options: MapOptions): [number, number] => {
-    return [options.width / 2, options.height / 2];
-};
+    graphs.edges.forEach(edge => {
+        if (
+            !edge.dEdge ||
+            (graphs.centers[edge.d0].water && graphs.centers[edge.d1].water)
+        ) {
+            edge.water = true;
+        }
+    });
 
-const calculateDistance = (x0: number, y0: number, x1: number, y1: number): number => {
-    return Math.sqrt(Math.pow(x0 - x1, 2) + Math.pow(y0 - y1, 2));
+    return graphs;
 }
 
-const calculateDistanceFromCenter = (x: number, y: number, options: MapOptions): number => {
-    const [cX, cY] = getCenterOfMap(options);
-    return calculateDistance(x, y, cX, cY);
-};
-
-const calculatePolygonArea = (centerIndex: number, graphs: LinkedGraphs): number => {
-    const center = graphs.centers[centerIndex];
-    const numPoints = center.corners.length;
-    let area = 0;
-    let j = numPoints - 1;
-    for (let i = 0; i < numPoints; i++) {
-        const cornerI = graphs.corners[center.corners[i]];
-        const cornerJ = graphs.corners[center.corners[j]];
-        area += (cornerJ.x + cornerI.x) * (cornerJ.y - cornerI.y);
-        j = i;
-    }
-    return Math.abs(area / 2);
+function removeLakes(graphs: LinkedGraphs): LinkedGraphs {
+    graphs.centers.forEach(center => {
+        if (center.water && !center.ocean) {
+            center.water = false;
+        }
+    });
+    return graphs;
 }
 
-const calculateAreaOfAllPolygons = (graphs: LinkedGraphs) => {
-    for (let i = 0; i < graphs.centers.length; i++) {
-        graphs.centers[i].area = calculatePolygonArea(i, graphs);
+function fillMainland(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
+    const centerIndex = findApproximateCenterAtCenterOfMap(graphs, options);
+
+    const visited: boolean[] = [];
+    const stack: number[] = [];
+
+    stack.push(centerIndex);
+
+    while (stack.length) {
+        const index = stack.pop();
+
+        if (index === undefined) continue;
+
+        graphs.centers[index].mainland = true;
+
+        if (!visited[index]) {
+            visited[index] = true;
+        }
+
+        graphs.centers[index].neighbours.forEach(neighbourIndex => {
+            if (!visited[neighbourIndex] && !graphs.centers[neighbourIndex].ocean) {
+                stack.push(neighbourIndex);
+            }
+        });
     }
+
+    return graphs;
 }
 
-// function polygonArea(X, Y, numPoints) 
-// { 
-// area = 0;   // Accumulates area 
-// j = numPoints-1; 
+function markCoastal(graphs: LinkedGraphs): LinkedGraphs {
+    graphs.corners.forEach(corner => {
+        let oceanFound = false;
+        let landFound = false;
 
-// for (i=0; i<numPoints; i++)
-// { area +=  (X[j]+X[i]) * (Y[j]-Y[i]); 
-//   j = i;  //j is previous vertex to i
-// }
-//   return area/2;
-// }
+        for (let i = 0; i < corner.touches.length; i++) {
+            const center = graphs.centers[corner.touches[i]];
+            if (center.ocean) {
+                oceanFound = true;
+            } else if (!center.water) {
+                landFound = true;
+            }
 
-// const isCornerOfMap = (x: number, y: number): boolean => (
-//     (x === 0 || x === options.width) &&
-//     (y === 0 || y === options.height)
-// );
+            if (oceanFound && landFound) {
+                corner.coastal = true;
+                break;
+            }
+        }     
+    });
+
+    graphs.centers.forEach(center => {
+        for (let i = 0; i < center.corners.length; i++) {
+            const corner = graphs.corners[center.corners[i]];
+            if (corner.coastal) {
+                center.coastal = true;
+                break;
+            }
+        }
+    });
+
+    graphs.edges.forEach(edge => {
+        const cornerA = graphs.corners[edge.v0];
+        const cornerB = graphs.corners[edge.v1];
+        if (
+            (cornerA.coastal && cornerB.coastal) &&
+            edge.dEdge &&
+            (!graphs.centers[edge.d0].water === graphs.centers[edge.d1].water)
+        ) {
+            edge.coastal = true;
+        }
+    });
+
+    return graphs;
+}

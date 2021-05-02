@@ -30,11 +30,13 @@ const initialDisplayOptions: MapDisplayOptions = {
 const initialMapOptions: MapOptions = {
   width: 600,
   height: 600,
-  numPolygons: 300,
+  numPolygons: 600,
   pointRelaxationIterations: 3,
   cornerRelaxationIterations: 1,
   seed: getRandomSeed()
 };
+
+const initialGameMap = generateMap(initialMapOptions);
 
 export const App: React.FC = () => {
   const classes = useStyles();
@@ -43,7 +45,7 @@ export const App: React.FC = () => {
 
   const [mapOptions, setMapOptions] = useState<MapOptions>(initialMapOptions);
 
-  const [gameMap, setGameMap] = useState<GameMap>(generateMap(mapOptions));
+  const [gameMap, setGameMap] = useState<GameMap>(initialGameMap);
 
   const handleMapDisplayOptionsChange = (updatedOptions: Partial<MapDisplayOptions>) => {
     setMapDisplayOptions({

@@ -51,12 +51,12 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             }
         }
 
-        const drawLine = (x0: number, y0: number, x1: number, y1: number, color: string, label?: number | string) => {
+        const drawLine = (x0: number, y0: number, x1: number, y1: number, color: string, label?: number | string, thickness = 1) => {
             ctx.beginPath();
             ctx.moveTo(x0, y0);
             ctx.lineTo(x1, y1);
             ctx.strokeStyle = color ?? 'black';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = thickness;
             ctx.stroke();
             ctx.closePath();
             const labelX = (x0 + x1) / 2;
@@ -88,11 +88,12 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             const startCorner = gameMap.graphs.corners[edge.v0];
             const endCorner = gameMap.graphs.corners[edge.v1];
             const label = options.voronoiEdgeLabels ? index : undefined;
-            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'black', label);
+            const thickness = edge.coastal ? 2 : 1;
+            drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'black', label, thickness);
         };
 
         const drawDelaunayEdge = (edge: Edge, index: number) => {
-            if (edge.d1 < 0) {
+            if (!edge.dEdge || edge.water || edge.coastal) {
                 return;
             }
             const startCenter = gameMap.graphs.centers[edge.d0];
@@ -152,8 +153,12 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
 }
 
 function getPolygonColor(center: Center): string {
-    if (center.water) {
+    if (center.ocean) {
         return '#006699';
+    } else if (center.water) {
+        return '#7E9CAB';
+    } else if (!center.mainland) {
+        return '#D29C80';
     }
     return '#be7853';
 }
