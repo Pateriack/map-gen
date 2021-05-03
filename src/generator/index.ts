@@ -1,13 +1,20 @@
 import { RoundedCornerSharp } from '@material-ui/icons';
 import { Delaunay } from 'd3-delaunay';
-import { noiseMaker } from './noise';
+import { NoiseFunction, noiseMaker } from './noise';
 import { RandomNumberGenerator } from './random-number-generator';
-import { GameMap, LinkedGraphs, MapOptions, Point, Polygon } from './types';
+import { GameMap, LinkedGraphs, MapOptions, Point, Polygon, Center, Corner, Edge, Region } from './types';
 import { calculateApproximateCentroid, calculateAreaOfAllPolygons, calculateDistanceFromCenter, findApproximateCenterAtCenterOfMap, getEdgeKey, isCenterAtEdgeOfMap, isEdgeOfMap, StringifiedKeyMap } from './utils';
+
+export type { GameMap, MapOptions, Center, Corner, Edge };
 
 export function generateMap(options: MapOptions): GameMap {
 
     const rng = new RandomNumberGenerator(options.seed);
+
+    let noiseCounter = 0;
+    const getNewNoiseFn = (): NoiseFunction => {
+        return noiseMaker(new RandomNumberGenerator(options.seed + noiseCounter));
+    }
 
     let points: Point[] = [];
 
@@ -24,19 +31,24 @@ export function generateMap(options: MapOptions): GameMap {
 
     calculateAreaOfAllPolygons(graphs);
 
-    graphs = radialWater(graphs, options, rng);
+    graphs = radialWater(graphs, options, getNewNoiseFn());
 
     graphs = fillOceans(graphs, options);
     graphs = removeLakes(graphs);
     graphs = fillMainland(graphs, options);
     graphs = markCoastal(graphs);
 
+    const regions: Region[] = [];
+
+
+
     console.log(graphs);
 
     return {
         width: options.width,
         height: options.height,
-        graphs
+        graphs,
+        regions
     };
 }
 
@@ -179,19 +191,19 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     return graphs;
 }
 
-function radialWater(graphs: LinkedGraphs, options: MapOptions, rng: RandomNumberGenerator): LinkedGraphs {
+function radialWater(graphs: LinkedGraphs, options: MapOptions, noise: NoiseFunction): LinkedGraphs {
     const RATIO_THRESHOLD = 0.4;
     const RATIO_NOISE_SCALING = 0.15;
     const CORNERS_REQUIRED_THRESHOLD = 0.5;
 
-    const noise2D = noiseMaker(rng);
+    
 
     const waterCorners = graphs.corners.map(corner => {
         const distanceFromCenter = calculateDistanceFromCenter(corner.x, corner.y, options);
         //todo: handle non-square maps better
         const ratioFromCenter = distanceFromCenter / Math.min(options.width, options.height);
-        const noise = noise2D(corner.x, corner.y);
-        const ratioWithNoise = ratioFromCenter + (noise * RATIO_NOISE_SCALING);
+        const noiseValue = noise(corner.x, corner.y);
+        const ratioWithNoise = ratioFromCenter + (noiseValue * RATIO_NOISE_SCALING);
         return ratioWithNoise > RATIO_THRESHOLD;
     });
 
@@ -333,4 +345,12 @@ function markCoastal(graphs: LinkedGraphs): LinkedGraphs {
     });
 
     return graphs;
+}
+
+function detectPeninsulas(graphs: LinkedGraphs, options: MapOptions): Region[] {
+    const peninsulas: Region[] = [];
+
+
+
+    return peninsulas;
 }

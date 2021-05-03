@@ -75,13 +75,14 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         };
 
         const drawCenter = (center: Center, index: number) => {
-            const label = options.centerLabels ? index : undefined;
+            const label = center.coastal && center.mainland ? index : undefined;
+            // const label = options.centerLabels ? index : undefined;
             drawPoint(center.x, center.y, 'black', label);
         };
 
         const drawCorner = (corner: Corner, index: number) => {
             const label = options.cornerLabels ? index : undefined;
-            drawPoint(corner.x, corner.y, 'blue', label);
+            drawPoint(corner.x, corner.y, 'red', label);
         };
 
         const drawVoronoiEdge = (edge: Edge, index: number) => {
@@ -99,7 +100,7 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             const startCenter = gameMap.graphs.centers[edge.d0];
             const endCenter = gameMap.graphs.centers[edge.d1];
             const label = options.delaunayEdgeLabels ? index : undefined;
-            drawLine(startCenter.x, startCenter.y, endCenter.x, endCenter.y, 'red', label);
+            drawLine(startCenter.x, startCenter.y, endCenter.x, endCenter.y, '#00db25', label);
         }
 
         const drawPolygon = (center: Center) => {

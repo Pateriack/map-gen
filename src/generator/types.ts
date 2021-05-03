@@ -6,13 +6,14 @@ export interface GameMap {
     width: number;
     height: number;
     graphs: LinkedGraphs;
+    regions: Region[];
 }
 
 export interface MapOptions {
     width: number;
     height: number;
     numPolygons: number;
-    seed?: string;
+    seed: string;
     pointRelaxationIterations?: number;
     cornerRelaxationIterations?: number;
 }
@@ -53,4 +54,9 @@ export interface LinkedGraphs {
     centers: Center[];
     edges: Edge[];
     corners: Corner[];
+}
+
+export interface Region {
+    centers: number[];
+    peninsula: boolean;
 }
