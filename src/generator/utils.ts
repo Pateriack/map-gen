@@ -1,4 +1,4 @@
-import { Center, LinkedGraphs, MapOptions, Point, Polygon } from "./types";
+import { Center, LinkedGraphs, MapOptions, Point, Polygon, Region } from "./types";
 
 export class StringifiedKeyMap <T, U> {
     private map: Map<string, U> = new Map();
@@ -104,4 +104,62 @@ export function calculateApproximateCentroid(polygon: Polygon): Point {
 
         return center;
     }, [0, 0]);
+}
+
+export function findAngle(a: Point, b: Point, c: Point) {
+    var AB = Math.sqrt(Math.pow(b[0]-a[0],2)+ Math.pow(b[1]-a[1],2));    
+    var BC = Math.sqrt(Math.pow(b[0]-c[0],2)+ Math.pow(b[1]-c[1],2)); 
+    var AC = Math.sqrt(Math.pow(c[0]-a[0],2)+ Math.pow(c[1]-a[1],2));
+    return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB));
+}
+
+// Converts from degrees to radians.
+export function toRadians(degrees: number) {
+  return degrees * Math.PI / 180;
+};
+ 
+// Converts from radians to degrees.
+export function toDegrees(radians: number) {
+  return radians * 180 / Math.PI;
+}
+
+
+export function calculateBearing(x0: number, y0: number, x1: number, y1: number) {
+  x0 = toRadians(x0);
+  y0 = toRadians(y0);
+  x1 = toRadians(x1);
+  y1 = toRadians(y1);
+
+  const y = Math.sin(y1 - y0) * Math.cos(x1);
+  const x = Math.cos(x0) * Math.sin(x1) -
+        Math.sin(x0) * Math.cos(x1) * Math.cos(y1 - y0);
+  let brng = Math.atan2(y, x);
+  brng = toDegrees(brng);
+  return (brng + 360) % 360;
+}
+
+export function calculateAbsBearingDifference(a: number, b: number) {
+    return Math.min(
+        Math.abs(a - b),
+        (360 - Math.max(a, b)) + Math.min(a, b)
+    );
+}
+
+export function calculateClockwiseBearingDifference(a: number, b: number) {
+    return b > a ? b - a : 360 - a + b
+}
+
+export function calculateAreaOfRegion(region: Region, graphs: LinkedGraphs): number {
+    return region.centers.reduce((area, i) => {
+        return area + calculatePolygonArea(i, graphs);
+    }, 0);
+}
+
+export function calculateDistanceFromOcean(x: number, y: number, graphs: LinkedGraphs, options: MapOptions): number {
+    return graphs.corners
+        .filter(corner => corner.coastal)
+        .reduce((closest, corner) => {
+            const distance = calculateDistance(x, y, corner.x, corner.y);
+            return Math.min(closest, distance);
+        }, Math.sqrt(Math.pow(options.width, 2) + Math.pow(options.height, 2)));
 }

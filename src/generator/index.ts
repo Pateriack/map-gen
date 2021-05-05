@@ -1,9 +1,12 @@
-import { RoundedCornerSharp } from '@material-ui/icons';
+import { hslToRgb } from '@material-ui/core';
+import { ContactSupport, RoundedCornerSharp } from '@material-ui/icons';
 import { Delaunay } from 'd3-delaunay';
+import { generateLakes } from './lakes';
 import { NoiseFunction, noiseMaker } from './noise';
+import { detectPeninsulas } from './peninsulas';
 import { RandomNumberGenerator } from './random-number-generator';
 import { GameMap, LinkedGraphs, MapOptions, Point, Polygon, Center, Corner, Edge, Region } from './types';
-import { calculateApproximateCentroid, calculateAreaOfAllPolygons, calculateDistanceFromCenter, findApproximateCenterAtCenterOfMap, getEdgeKey, isCenterAtEdgeOfMap, isEdgeOfMap, StringifiedKeyMap } from './utils';
+import { calculateApproximateCentroid, calculateAreaOfAllPolygons, calculateDistance, calculateDistanceFromCenter, findApproximateCenterAtCenterOfMap, getEdgeKey, isCenterAtEdgeOfMap, isEdgeOfMap, StringifiedKeyMap, calculatePolygonArea, calculateAreaOfRegion } from './utils';
 
 export type { GameMap, MapOptions, Center, Corner, Edge };
 
@@ -31,18 +34,18 @@ export function generateMap(options: MapOptions): GameMap {
 
     calculateAreaOfAllPolygons(graphs);
 
-    graphs = radialWater(graphs, options, getNewNoiseFn());
+    radialWater(graphs, options, getNewNoiseFn());
 
-    graphs = fillOceans(graphs, options);
-    graphs = removeLakes(graphs);
-    graphs = fillMainland(graphs, options);
-    graphs = markCoastal(graphs);
+    fillOceans(graphs, options);
+    removeLakes(graphs);
+    fillMainland(graphs, options);
+    markCoastal(graphs);
 
-    const regions: Region[] = [];
+    let regions: Region[] = [];
 
+    regions.push(...detectPeninsulas(graphs, options));
 
-
-    console.log(graphs);
+    generateLakes(graphs, regions, options, rng);
 
     return {
         width: options.width,
@@ -191,7 +194,7 @@ function buildLinkedGraphs(points: Point[], options: MapOptions): LinkedGraphs {
     return graphs;
 }
 
-function radialWater(graphs: LinkedGraphs, options: MapOptions, noise: NoiseFunction): LinkedGraphs {
+function radialWater(graphs: LinkedGraphs, options: MapOptions, noise: NoiseFunction) {
     const RATIO_THRESHOLD = 0.4;
     const RATIO_NOISE_SCALING = 0.15;
     const CORNERS_REQUIRED_THRESHOLD = 0.5;
@@ -217,11 +220,9 @@ function radialWater(graphs: LinkedGraphs, options: MapOptions, noise: NoiseFunc
         const waterCornerRatio = numWaterCorners / numCorners;
         center.water = waterCornerRatio > CORNERS_REQUIRED_THRESHOLD;
     });
-
-    return graphs;
 }
 
-function fillOceans(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
+function fillOceans(graphs: LinkedGraphs, options: MapOptions) {
     let startingIndex = graphs.centers.findIndex(center => isCenterAtEdgeOfMap(center, graphs, options));
 
     if (isNaN(startingIndex)){
@@ -260,20 +261,17 @@ function fillOceans(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
             edge.water = true;
         }
     });
-
-    return graphs;
 }
 
-function removeLakes(graphs: LinkedGraphs): LinkedGraphs {
+function removeLakes(graphs: LinkedGraphs) {
     graphs.centers.forEach(center => {
         if (center.water && !center.ocean) {
             center.water = false;
         }
     });
-    return graphs;
 }
 
-function fillMainland(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
+function fillMainland(graphs: LinkedGraphs, options: MapOptions) {
     const centerIndex = findApproximateCenterAtCenterOfMap(graphs, options);
 
     const visited: boolean[] = [];
@@ -288,9 +286,7 @@ function fillMainland(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
 
         graphs.centers[index].mainland = true;
 
-        if (!visited[index]) {
-            visited[index] = true;
-        }
+        visited[index] = true;
 
         graphs.centers[index].neighbours.forEach(neighbourIndex => {
             if (!visited[neighbourIndex] && !graphs.centers[neighbourIndex].ocean) {
@@ -298,11 +294,9 @@ function fillMainland(graphs: LinkedGraphs, options: MapOptions): LinkedGraphs {
             }
         });
     }
-
-    return graphs;
 }
 
-function markCoastal(graphs: LinkedGraphs): LinkedGraphs {
+function markCoastal(graphs: LinkedGraphs) {
     graphs.corners.forEach(corner => {
         let oceanFound = false;
         let landFound = false;
@@ -343,14 +337,4 @@ function markCoastal(graphs: LinkedGraphs): LinkedGraphs {
             edge.coastal = true;
         }
     });
-
-    return graphs;
-}
-
-function detectPeninsulas(graphs: LinkedGraphs, options: MapOptions): Region[] {
-    const peninsulas: Region[] = [];
-
-
-
-    return peninsulas;
 }

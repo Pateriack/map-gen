@@ -29,6 +29,7 @@ export interface Center {
     area: number;
     mainland: boolean;
     coastal: boolean;
+    debugColor?: string;
 }
 
 export interface Edge {

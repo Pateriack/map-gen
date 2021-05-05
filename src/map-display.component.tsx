@@ -69,14 +69,15 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
         const drawLabel = (text: string | number, x: number, y: number, xOffset = 0, yOffset = 0, edgePadding = 14) => {
             const xPos = clamp(x + xOffset, edgePadding, gameMap.width - edgePadding);
             const yPos = clamp(y + yOffset, edgePadding, gameMap.height - edgePadding);
-            ctx.font = '13px Arial';
-            ctx.strokeStyle = 'black';
+            ctx.font = '12px Arial';
+            ctx.strokeStyle = 'white';
             ctx.strokeText(String(text), xPos, yPos);
         };
 
         const drawCenter = (center: Center, index: number) => {
-            const label = center.coastal && center.mainland ? index : undefined;
+            // const label = center.coastal && center.mainland ? index : undefined;
             // const label = options.centerLabels ? index : undefined;
+            const label = center.debugColor ? index : undefined;
             drawPoint(center.x, center.y, 'black', label);
         };
 
@@ -154,7 +155,9 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
 }
 
 function getPolygonColor(center: Center): string {
-    if (center.ocean) {
+    if (center.debugColor) {
+        return center.debugColor;
+    } else if (center.ocean) {
         return '#006699';
     } else if (center.water) {
         return '#7E9CAB';
