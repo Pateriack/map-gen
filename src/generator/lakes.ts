@@ -1,7 +1,7 @@
 import { MapOptions } from ".";
 import { RandomNumberGenerator } from "./random-number-generator";
 import { LinkedGraphs, Region } from "./types";
-import { calculateDistanceFromCenter, calculateDistanceFromOcean, calculatePolygonArea } from "./utils";
+import { calculateDistance, calculateDistanceFromCenter, calculateDistanceFromOcean, calculatePolygonArea, getMaxDistance } from "./utils";
 
 const DEBUG_COLOR = '#734AD1';
 const MIN_NUM_LAKES = 1;
@@ -67,6 +67,8 @@ export function generateLakes(graphs: LinkedGraphs, regions: Region[], options: 
     }
 
     removeIslands(graphs);
+    markLakeshore(graphs);
+    markWaterEdges(graphs);
 }
 
 function isValidLakePosition (centerIndex: number, graphs: LinkedGraphs, regions: Region[], options: MapOptions): boolean {
@@ -147,4 +149,67 @@ function removeIslands(graphs: LinkedGraphs) {
             center.water = true;
         }
     });
+}
+
+function markLakeshore(graphs: LinkedGraphs) {
+    graphs.corners.forEach(corner => {
+        let lakeFound = false;
+        let landFound = false;
+
+        for (let i = 0; i < corner.touches.length; i++) {
+            const center = graphs.centers[corner.touches[i]];
+            if (center.water && !center.ocean) {
+                lakeFound = true;
+            } else if (!center.water) {
+                landFound = true;
+            }
+
+            if (lakeFound && landFound) {
+                corner.lakeshore = true;
+                break;
+            }
+        }     
+    });
+
+    graphs.centers.forEach(center => {
+        for (let i = 0; i < center.corners.length; i++) {
+            const corner = graphs.corners[center.corners[i]];
+            if (corner.lakeshore) {
+                center.lakeshore = true;
+                break;
+            }
+        }
+    });
+
+    graphs.edges.forEach(edge => {
+        const cornerA = graphs.corners[edge.v0];
+        const cornerB = graphs.corners[edge.v1];
+        if (
+            (cornerA.lakeshore && cornerB.lakeshore) &&
+            edge.dEdge &&
+            (!graphs.centers[edge.d0].water === graphs.centers[edge.d1].water)
+        ) {
+            edge.lakeshore = true;
+        }
+    });
+}
+
+function markWaterEdges(graphs: LinkedGraphs) {
+    graphs.edges.forEach(edge => {
+        if (
+            !edge.dEdge ||
+            (graphs.centers[edge.d0].water && graphs.centers[edge.d1].water)
+        ) {
+            edge.water = true;
+        }
+    });
+}
+
+export function calculateDistanceFromNearestLakeCorner(x: number, y: number, graphs: LinkedGraphs, options: MapOptions): number {
+    return graphs.corners
+        .filter(corner => corner.lakeshore)
+        .reduce((minDistance, corner) => {
+            const distance = calculateDistance(x, y, corner.x, corner.y);
+            return Math.min(minDistance, distance);
+        }, getMaxDistance(options));
 }

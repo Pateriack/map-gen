@@ -36,7 +36,7 @@ export const MapOptionsForm: React.FC<MapOptionsFormProps> = ({
         <React.Fragment>
             <Typography variant='h6' gutterBottom>Map Generation</Typography>
             <form className={classes.form}>
-                <TextField
+                {/* <TextField
                   label='Number of Polygons'
                   type='number'
                   value={mapOptions.numPolygons}
@@ -56,7 +56,7 @@ export const MapOptionsForm: React.FC<MapOptionsFormProps> = ({
                   value={mapOptions.cornerRelaxationIterations}
                   fullWidth
                   onChange={e => onChange({ cornerRelaxationIterations: parseInt(e.target.value) })}
-                />
+                /> */}
                 <TextField
                   label='Seed'
                   value={mapOptions.seed}

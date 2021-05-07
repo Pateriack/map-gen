@@ -30,6 +30,7 @@ export interface Center {
     mainland: boolean;
     coastal: boolean;
     debugColor?: string;
+    lakeshore: boolean;
 }
 
 export interface Edge {
@@ -40,6 +41,7 @@ export interface Edge {
     dEdge: boolean; // is it a delaunay edge?
     coastal: boolean;
     water: boolean;
+    lakeshore: boolean;
 }
 
 export interface Corner {
@@ -49,6 +51,7 @@ export interface Corner {
     protrudes: number[]; // edge index
     adjacent: number[]; // corner index
     coastal: boolean;
+    lakeshore: boolean;
 }
 
 export interface LinkedGraphs {
@@ -60,4 +63,5 @@ export interface LinkedGraphs {
 export interface Region {
     centers: number[];
     peninsula: boolean;
+    startingArea: boolean;
 }

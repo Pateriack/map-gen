@@ -163,3 +163,7 @@ export function calculateDistanceFromOcean(x: number, y: number, graphs: LinkedG
             return Math.min(closest, distance);
         }, Math.sqrt(Math.pow(options.width, 2) + Math.pow(options.height, 2)));
 }
+
+export function getMaxDistance(options: MapOptions): number {
+    return Math.sqrt(Math.pow(options.width, 2) + Math.pow(options.height, 2));
+}

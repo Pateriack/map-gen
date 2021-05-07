@@ -90,12 +90,12 @@ export const MapDisplay: React.FC<MapDisplayProps> = ({
             const startCorner = gameMap.graphs.corners[edge.v0];
             const endCorner = gameMap.graphs.corners[edge.v1];
             const label = options.voronoiEdgeLabels ? index : undefined;
-            const thickness = edge.coastal ? 2 : 1;
+            const thickness = edge.coastal || edge.lakeshore ? 2 : 1;
             drawLine(startCorner.x, startCorner.y, endCorner.x, endCorner.y, 'black', label, thickness);
         };
 
         const drawDelaunayEdge = (edge: Edge, index: number) => {
-            if (!edge.dEdge || edge.water || edge.coastal) {
+            if (!edge.dEdge || edge.water || edge.coastal || edge.lakeshore) {
                 return;
             }
             const startCenter = gameMap.graphs.centers[edge.d0];

@@ -190,7 +190,8 @@ function createPeninsulaRegions(graphs: LinkedGraphs, partOfPeninsula: boolean[]
 
         regions.push({
             centers: thisPeninsula,
-            peninsula: true
+            peninsula: true,
+            startingArea: false
         });
     });
 
